@@ -1,0 +1,112 @@
+import pygame
+import sys
+
+pygame.init()
+
+WIDTH, HEIGHT = 800, 600
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Fireboy & Watergirl (Pygame)")
+
+clock = pygame.time.Clock()
+
+# Colors
+WHITE = (255, 255, 255)
+RED = (255, 100, 100)
+BLUE = (100, 100, 255)
+BLACK = (0, 0, 0)
+ORANGE = (255, 140, 0)
+
+gravity = 0.5
+
+class Player:
+    def __init__(self, x, y, color, controls, element):
+        self.rect = pygame.Rect(x, y, 40, 50)
+        self.vel_y = 0
+        self.speed = 5
+        self.jump = -10
+        self.color = color
+        self.controls = controls
+        self.element = element
+        self.on_ground = False
+
+    def move(self, keys):
+        dx = 0
+
+        if keys[self.controls["left"]]:
+            dx = -self.speed
+        if keys[self.controls["right"]]:
+            dx = self.speed
+        if keys[self.controls["jump"]] and self.on_ground:
+            self.vel_y = self.jump
+
+        self.vel_y += gravity
+        self.rect.x += dx
+        self.rect.y += self.vel_y
+
+        # Floor collision
+        if self.rect.bottom >= HEIGHT - 50:
+            self.rect.bottom = HEIGHT - 50
+            self.vel_y = 0
+            self.on_ground = True
+        else:
+            self.on_ground = False
+
+    def draw(self):
+        pygame.draw.rect(screen, self.color, self.rect)
+
+    def check_hazard(self, hazards):
+        for hazard in hazards:
+            if self.rect.colliderect(hazard["rect"]):
+                if hazard["type"] != self.element:
+                    return True
+        return False
+
+# Players
+fireboy = Player(100, 400, RED, {
+    "left": pygame.K_a,
+    "right": pygame.K_d,
+    "jump": pygame.K_w
+}, "fire")
+
+watergirl = Player(200, 400, BLUE, {
+    "left": pygame.K_LEFT,
+    "right": pygame.K_RIGHT,
+    "jump": pygame.K_UP
+}, "water")
+
+# Hazards
+hazards = [
+    {"rect": pygame.Rect(300, 550, 200, 50), "type": "fire"},
+    {"rect": pygame.Rect(550, 550, 200, 50), "type": "water"}
+]
+
+# Game loop
+while True:
+    screen.fill(WHITE)
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
+
+    keys = pygame.key.get_pressed()
+
+    fireboy.move(keys)
+    watergirl.move(keys)
+
+    # Draw hazards
+    for hazard in hazards:
+        color = ORANGE if hazard["type"] == "fire" else BLUE
+        pygame.draw.rect(screen, color, hazard["rect"])
+
+    fireboy.draw()
+    watergirl.draw()
+
+    # Check deaths
+    if fireboy.check_hazard(hazards):
+        print("Fireboy died!")
+    if watergirl.check_hazard(hazards):
+        print("Watergirl died!")
+
+    pygame.display.update()
+    clock.tick(60)
